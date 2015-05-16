@@ -1,5 +1,19 @@
 (ns bonjai.tree
-  (:require [fast-zip.core :as z]))
+  (:require [fast-zip.core :as z]
+            [clojure.set :refer [map-invert]]))
+
+(def match-var? symbol?)
+
+(defn build-map-matchers [value pattern]
+  (let [matchers
+        (apply
+         map vector
+         (for [[k v] pattern]
+           (if (match-var? k)
+             [[v (get (map-invert value) v ::none)] [v k]]
+             [[k (get value k ::none)] [k v]])))]
+    (when-not (some #(= % ::none) (->> matchers first (map second)))
+      matchers)))
 
 (defn match [value pattern]
   (loop [[value-zipper pattern-zipper :as both-zippers] (map #(z/zipper coll? seq {} [%]) [value pattern])
@@ -14,8 +28,7 @@
            (every? map? both-nodes)
            (map (comp z/next z/replace)
                 both-zippers
-                (map #(sort-by key %)
-                     [(select-keys value-node (keys pattern-node)) pattern-node]))
+                (build-map-matchers value-node pattern-node))
 
            (or (every? z/branch? both-zippers) (= value-node pattern-node))
            (map z/next both-zippers)
