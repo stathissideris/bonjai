@@ -5,12 +5,13 @@
 (def match-var? symbol?)
 
 (defn build-map-matchers [value pattern]
-  (let [matchers
+  (let [inv-map (map-invert value)
+        matchers
         (apply
          map vector
          (for [[k v] pattern]
            (if (match-var? k)
-             [[v (get (map-invert value) v ::none)] [v k]]
+             [[v (get inv-map v ::none)] [v k]]
              [[k (get value k ::none)] [k v]])))]
     (when-not (some #(= % ::none) (->> matchers first (map second)))
       matchers)))
